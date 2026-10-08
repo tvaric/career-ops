@@ -1,0 +1,25 @@
+# Settings for the fork-local tools (local-triage.mjs, notify-telegram.mjs, schedule.mjs).
+# Copy this `fork:` block into config/profile.yml (gitignored) and edit it.
+# Anything you leave out falls back to the defaults in fork-config.mjs.
+# Output language comes from `language.output` in profile.yml (en or uk).
+fork:
+  triage:
+    model: gemma4:12b              # any Ollama model; pull it first: ollama pull <model>
+    limit_per_run: 10              # max postings the local model evaluates per run
+    home_city: Lisbon              # on-site / hybrid here is fine
+    home_country: Portugal         # "remote, <country> allowed" scores as home
+    home_country_aliases: [Portugal]
+    remote_regions: [Europe, EMEA, EU, CET]
+    accepted_remote_countries: []  # other countries you can work remotely for (e.g. as a contractor)
+    salary_floor: { amount: 4000, currency: EUR, period: month }   # below it = small comp score, not a DQ
+    fx_to_usd: { EUR: 1.12, GBP: 1.33 }                             # used to compare salaries
+    core_domains: [b2b_saas, enterprise, data_heavy]
+    adjacent_domains: [fintech, devtools]
+    weak_domains: [gaming, adtech]
+    dq_role_types: [marketing_brand]
+    # Optional — score weights and verdict thresholds (defaults shown in fork-config.mjs)
+    # thresholds: { strong_apply: 80, apply: 65, low_priority: 50 }
+  notify:
+    verdicts: [Strong Apply, Apply, Low Priority]   # which verdicts go to Telegram
+  schedule:
+    hours: [9, 14, 19]             # local time, used by: node schedule.mjs install

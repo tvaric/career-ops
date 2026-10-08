@@ -1,3 +1,5 @@
+> **This is a personal fork of [santifer/career-ops](https://github.com/santifer/career-ops).** It adds local-LLM triage (Ollama), DOU and Djinni job boards, and scheduled Telegram alerts — see **[docs/FORK.md](docs/FORK.md)**. Everything below is the upstream README.
+
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/wordmark-dark.svg"><img src="docs/wordmark-light.svg" alt="career-ops" width="250" height="56"></picture></p>
 
 <p align="center">The open-source AI job search agent.</p>
