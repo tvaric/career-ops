@@ -25,6 +25,7 @@ Nothing is ever submitted on your behalf.
 | `daily-run.sh` | One full run: start Ollama if needed → scan → triage → Telegram. Sends a Telegram alert if a step fails. |
 | `schedule.mjs` | Installs / removes the launchd job that runs `daily-run.sh` at the hours you choose. |
 | `config/fork.example.yml` | Example settings block. |
+| `modes/_brief.example.md` | Template for `modes/_brief.md`, the short candidate brief the model reads. |
 | `tests/providers/dou-djinni.test.mjs`, `tests/fork/local-tools.test.mjs` | Tests (run with `node test-all.mjs`). |
 
 ---
@@ -82,7 +83,8 @@ Tested on a MacBook Pro M1 with 16 GB RAM and `gemma4:12b`.
 2. Pull a model: `ollama pull gemma4:12b`.
 3. Copy the `fork:` block from [`config/fork.example.yml`](../config/fork.example.yml) into `config/profile.yml` and edit it
    (home city/country, salary floor, domains). Set `language.output` to `en` or `uk`.
-4. Write a short brief in `modes/_brief.md`: who you are, target roles, proof points, hard disqualifiers. Keep it under ~2K tokens.
+4. Write a short brief: `cp modes/_brief.example.md modes/_brief.md` and fill it in — who you are, target roles,
+   what you have and have not done, hard disqualifiers. Keep it under ~2K tokens: the model reads it with every posting.
 5. Add DOU / Djinni (optional) to `portals.yml` under `job_boards`, e.g.
    ```yaml
    - { name: DOU Design, provider: dou, category: Design, exp: 5plus, enabled: true }

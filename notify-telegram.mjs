@@ -67,7 +67,7 @@ export function buildMessages(rows, skipped, S = STRINGS.en) {
 
 async function tg(method, body) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new Error('Немає TELEGRAM_BOT_TOKEN у .env');
+  if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing in .env (create a bot with @BotFather, see docs/FORK.md)');
   const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   });
@@ -77,8 +77,9 @@ async function tg(method, body) {
 }
 
 async function send(text) {
+  if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is missing in .env (create a bot with @BotFather, see docs/FORK.md)');
   const chat_id = process.env.TELEGRAM_CHAT_ID;
-  if (!chat_id) throw new Error('Немає TELEGRAM_CHAT_ID у .env (дізнайся: node notify-telegram.mjs --chat-id)');
+  if (!chat_id) throw new Error('TELEGRAM_CHAT_ID is missing in .env (get it with: node notify-telegram.mjs --chat-id)');
   await tg('sendMessage', { chat_id, text, parse_mode: 'HTML', disable_web_page_preview: true });
 }
 
@@ -91,10 +92,10 @@ async function main() {
   if (args.includes('--chat-id')) {
     const ups = await tg('getUpdates', {});
     const ids = [...new Set(ups.map((u) => u.message?.chat?.id).filter(Boolean))];
-    console.log(ids.length ? `TELEGRAM_CHAT_ID=${ids[ids.length - 1]}` : 'Повідомлень нема. Напиши боту будь-що в Telegram і запусти ще раз.');
+    console.log(ids.length ? `TELEGRAM_CHAT_ID=${ids[ids.length - 1]}` : 'No messages yet. Send your bot any message in Telegram, then run this again.');
     return;
   }
-  if (args.includes('--test')) { await send(S.testMsg); console.log('Надіслано.'); return; }
+  if (args.includes('--test')) { await send(S.testMsg); console.log('Sent.'); return; }
   const ei = args.indexOf('--error');
   if (ei >= 0) { await send(`${S.failMsg}\n<code>${esc(args[ei + 1] || '')}</code>`); return; }
 
@@ -104,19 +105,19 @@ async function main() {
   const fresh = rows.reverse().filter((r) => r.url && !sent.has(r.url) && !seen.has(r.url) && seen.add(r.url));
   const markSent = (list) => list.length && appendFileSync(SENT, list.map((r) => r.url).join('\n') + '\n');
 
-  if (args.includes('--init')) { markSent(fresh); console.log(`Позначено як надіслані: ${fresh.length}. Далі прийдуть тільки нові.`); return; }
+  if (args.includes('--init')) { markSent(fresh); console.log(`Marked as sent: ${fresh.length}. Only new postings will be sent from now on.`); return; }
 
   const toSend = fresh.filter((r) => SEND_VERDICTS.has(r.verdict));
   const skipped = fresh.length - toSend.length;
-  if (!toSend.length) { console.log(`Нових для надсилання немає (відсіяно: ${skipped}).`); markSent(fresh); return; }
+  if (!toSend.length) { console.log(`Nothing new to send (filtered out: ${skipped}).`); markSent(fresh); return; }
 
   const msgs = buildMessages(toSend, skipped, S);
-  if (args.includes('--dry-run')) { msgs.forEach((m, i) => console.log(`--- повідомлення ${i + 1} ---\n${m}\n`)); return; }
+  if (args.includes('--dry-run')) { msgs.forEach((m, i) => console.log(`--- message ${i + 1} ---\n${m}\n`)); return; }
   for (const m of msgs) await send(m);
   markSent(fresh);
-  console.log(`Надіслано вакансій: ${toSend.length} (${msgs.length} повідомл.), відсіяно: ${skipped}.`);
+  console.log(`Sent postings: ${toSend.length} (${msgs.length} message(s)), filtered out: ${skipped}.`);
 }
 
 if (isMainModule(import.meta.url)) {
-  main().catch((e) => { console.error(`Помилка: ${e.message}`); process.exit(1); });
+  main().catch((e) => { console.error(`Error: ${e.message}`); process.exit(1); });
 }

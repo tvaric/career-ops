@@ -320,7 +320,9 @@ export function scoreFacts(raw, job, cfg = loadConfig()) {
 }
 
 async function askModel(opts, messages) {
-  const res = await fetch(`${opts.baseUrl}/api/chat`, {
+  let res;
+  try {
+    res = await fetch(`${opts.baseUrl}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -332,7 +334,15 @@ async function askModel(opts, messages) {
       options: { temperature: 0, seed: 42, num_ctx: opts.numCtx }, // as repeatable as the model allows
     }),
     signal: AbortSignal.timeout(opts.timeoutMs),
-  });
+    });
+  } catch (err) {
+    if (err?.cause?.code === 'ECONNREFUSED' || /fetch failed/.test(String(err?.message))) {
+      const e = new Error(`Ollama is not running at ${opts.baseUrl} — start the Ollama app (or: ollama serve)`);
+      e.ollamaDown = true;
+      throw e;
+    }
+    throw err;
+  }
   if (!res.ok) throw new Error(`Ollama HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const decoder = new TextDecoder();
   let buf = '', acc = '', promptTokens = 0;
@@ -396,11 +406,13 @@ async function main() {
   const today = new Date().toISOString().slice(0, 10);
   console.log(`Model: ${opts.model} · ${queue.length} posting(s)\n`);
 
+  let saved = 0;
   for (const job of queue) {
     const label = `${job.company} — ${job.title}`;
     const t0 = Date.now();
     if (applied.has(urlKey(job.url))) {
       appendFileSync(PATHS.triage, formatRow(today, job, { verdict: S.alreadyApplied, score: '—', reason: S.alreadyAppliedReason, risk: '' }) + '\n', 'utf-8');
+      saved++;
       console.log(`↩️  ${label}: already in data/applications.md — not evaluated`);
       continue;
     }
@@ -418,18 +430,20 @@ async function main() {
       promptTokens = out.promptTokens;
       result = scoreFacts(out.text, job, cfg);
     } catch (err) {
+      if (err.ollamaDown) throw err; // no point trying the rest of the queue
       console.log(`❌  ${label}: model call failed — ${err.message}`);
       continue;
     }
     if (!result) { console.log(`❌  ${label}: model did not return valid JSON`); continue; }
 
     appendFileSync(PATHS.triage, formatRow(today, job, result) + '\n', 'utf-8');
+    saved++;
     const secs = Math.round((Date.now() - t0) / 1000);
     const p = result.parts;
     console.log(`${result.verdict.padEnd(12)} ${String(result.score).padStart(3)}  ${label}  [level ${p.level}/25 · domain ${p.domain}/25 · location ${p.location}/20 · pay ${p.comp}/15 · must-haves ${p.must_haves}/15]  (${secs}s, JD via ${jd.via}, ${promptTokens} prompt tokens)`);
     console.log(`             ${result.reason}`);
   }
-  console.log(`\nSaved to data/triage.md`);
+  console.log(saved ? `\nSaved ${saved} row(s) to data/triage.md` : '\nNothing new saved to data/triage.md');
 }
 
 if (isMainModule(import.meta.url)) {
